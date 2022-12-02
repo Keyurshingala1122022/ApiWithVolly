@@ -16,10 +16,11 @@ import java.io.FileOutputStream;
 
 public class BaseActivity extends AppCompatActivity {
 
-//    String testEmail = "ronakg.optimumbrew@gmail.com";
-//    String testPass = "K#a6j2DaEb4sShq";
-    String testEmail = "hahetas510@diratu.com";
+    public static final String BASE_URL = "http://192.168.0.108/ask_question_poll/api/public/api/";
+
+    String testEmail = "keyur_shingala3@gmail.com";
     String testPass = "123";
+
     Gson g = new Gson();
 
     public byte[] BitmapToByte(Bitmap bitmap) {

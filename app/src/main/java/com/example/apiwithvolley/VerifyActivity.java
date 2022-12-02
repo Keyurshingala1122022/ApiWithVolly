@@ -15,23 +15,21 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.apiwithvolley.databinding.ActivityVerifyBinding;
-import com.google.gson.Gson;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TimeZone;
 
 public class VerifyActivity extends BaseActivity {
 
     ActivityVerifyBinding bind;
 
+    @SuppressLint("HardwareIds")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,12 +45,12 @@ public class VerifyActivity extends BaseActivity {
     }
 
     String tempId;
-    String email;
 
     private void initUI() {
         tempId = getIntent().getStringExtra("temp_id");
-        email = getIntent().getStringExtra("email");
-        if (tempId == null || email ==null) {
+        log("temp id: " + tempId);
+
+        if (tempId == null) {
             tos("Something went wrong");
             return;
         }
@@ -72,34 +70,68 @@ public class VerifyActivity extends BaseActivity {
             return;
         }
 
-        String verifyUrl = "http://192.168.0.108/ask_question_poll/api/public/api/verifyUser";
-//        String verifyUrl = "http://192.168.0.108/ask_question_poll/api/public/api/verifyOtpForUser";
-
         bind.ll.setClickable(false);
         bind.pb.setVisibility(View.VISIBLE);
         RequestQueue queue = Volley.newRequestQueue(this);
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, verifyUrl, response -> {
-            bind.ll.setClickable(true);
-            bind.pb.setVisibility(View.GONE);
+        JSONObject body = new JSONObject();
+        try {
+            JSONObject deviceInfo = new JSONObject();
 
-//            {"code":201,"message":"Trying to get property 'device_info' of non-object","cause":"","data":""}
-            try {
-                JSONObject jsonObject = new JSONObject(response);
+            deviceInfo.put("device_reg_id", "");
+            deviceInfo.put("device_platform", "Android");
+            deviceInfo.put("device_model_name", Build.MODEL);
+            deviceInfo.put("device_vendor_name", Build.MANUFACTURER);
+            deviceInfo.put("device_os_version", String.valueOf(Build.VERSION.SDK_INT));
+            deviceInfo.put("device_udid", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
 
-                String message = jsonObject.getString("message");
-                tos(message);
+            DisplayMetrics dm = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getMetrics(dm);
+            deviceInfo.put("device_resolution", dm.widthPixels + "x" + dm.heightPixels);
 
-                Integer code = jsonObject.getInt("code");
-                if (code == 200) {
-                    startActivity(new Intent(VerifyActivity.this, SignInActivity.class));
-                    finishAffinity();
+            TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            deviceInfo.put("device_carrier", tm.getNetworkOperatorName());
+            deviceInfo.put("device_country_code", getResources().getConfiguration().locale.getCountry());
+            deviceInfo.put("device_language", Locale.getDefault().getLanguage());
+            deviceInfo.put("$device_local_code", Locale.getDefault().getISO3Language());
+            deviceInfo.put("device_default_time_zone", TimeZone.getDefault().getID());
+            deviceInfo.put("device_library_version", "");
+            deviceInfo.put("device_application_version", BuildConfig.VERSION_NAME);
+            deviceInfo.put("device_type", isTablet(VerifyActivity.this) ? "Tablet" : "Phone");
+            deviceInfo.put("device_registration_date", DateFormat.format("yyyy-MM-dd hh:mm:ss a", Build.TIME).toString());
+            deviceInfo.put("is_active", "1");
+
+
+            body.put("user_reg_temp_id", tempId);
+            body.put("token", token);
+            body.put("device_info", deviceInfo);
+
+            log(body.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, BASE_URL + "verifyUser", body, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                bind.ll.setClickable(true);
+                bind.pb.setVisibility(View.GONE);
+
+                try {
+                    String message = response.getString("message");
+                    tos(message);
+
+                    int code = response.getInt("code");
+                    if (code == 200) {
+                        startActivity(new Intent(VerifyActivity.this, SignInActivity.class));
+                        finishAffinity();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
 
-            log(response);
+                log(response.toString());
+            }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
@@ -108,50 +140,8 @@ public class VerifyActivity extends BaseActivity {
                 error.printStackTrace();
                 log(error.getMessage());
             }
-        }) {
-            @SuppressLint("HardwareIds")
-            @Override
-            protected Map<String, String> getParams() {
+        });
 
-                Map<String, String> params = new HashMap<>();
-                params.put("device_reg_id", "");
-                params.put("device_platform", "Android");
-                params.put("device_model_name", Build.MODEL);
-                params.put("device_vendor_name", Build.MANUFACTURER);
-                params.put("device_os_version", String.valueOf(Build.VERSION.SDK_INT));
-                params.put("device_udid", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
-
-                DisplayMetrics dm = new DisplayMetrics();
-                getWindowManager().getDefaultDisplay().getMetrics(dm);
-                params.put("device_resolution", dm.widthPixels + "x" + dm.heightPixels);
-
-                TelephonyManager tm = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE));
-                params.put("device_carrier", tm.getNetworkOperatorName());
-                params.put("device_country_code", tm.getNetworkCountryIso());
-                params.put("device_language", Locale.getDefault().getLanguage());
-                params.put("device_local_code", Locale.getDefault().getISO3Language());
-                params.put("device_default_time_zone", TimeZone.getDefault().toString());
-                params.put("device_library_version", "");
-                params.put("device_application_version", BuildConfig.VERSION_NAME);
-                params.put("device_type", isTablet(VerifyActivity.this) ? "Tablet" : "Phone");
-                params.put("device_registration_date", DateFormat.format("yyyy-MM-dd hh:mm:ss a", Build.TIME).toString());
-                params.put("is_active", "1");
-
-                Map<String, String> body = new HashMap<>();
-                body.put("user_reg_temp_id", tempId);
-                body.put("token", token);
-//                body.put("device_info", params.toString());
-                body.put("device_info", g.toJson(params));
-
-
-//                Map<String, String> body = new HashMap<>();
-//                body.put("email_id", email);
-//                body.put("token", token);
-
-                return body;
-            }
-        };
-
-        queue.add(stringRequest);
+        queue.add(request);
     }
 }

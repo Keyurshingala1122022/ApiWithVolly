@@ -1,12 +1,13 @@
-package com.example.apiwithvolley;
+package com.example.apiwithvolley.service;
 
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.example.apiwithvolley.R;
 import com.example.apiwithvolley.model.User;
 import com.google.gson.Gson;
-
+//11:30
 public class App extends Application {
 
     static Gson gson = new Gson();
@@ -31,6 +32,7 @@ public class App extends Application {
         return gson.fromJson(preferences.getString(USER, ""), User.class);
     }
 
+    public static final String TOKEN = "token";
     //--------------------common methods-------------------------//
     public static void putString(String key, String value) {
         editor.putString(key, value).commit();

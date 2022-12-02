@@ -14,6 +14,8 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 import com.example.apiwithvolley.databinding.ActivitySignupBinding;
+import com.example.apiwithvolley.service.App;
+import com.example.apiwithvolley.service.VolleyMultipartRequest;
 import com.google.gson.Gson;
 
 import org.json.JSONObject;
@@ -40,6 +42,11 @@ public class SignUpActivity extends BaseActivity {
     }
 
     private void initUI() {
+        if (App.getUser() != null) {
+            startActivity(new Intent(this, MainActivity.class));
+            finishAffinity();
+        }
+
         bind.ifvProfile.setOnClickListener(v -> {
             Intent i = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*");
             startActivityForResult(Intent.createChooser(i, "Select Picture"), SELECT_IMG);
@@ -63,12 +70,12 @@ public class SignUpActivity extends BaseActivity {
         bind.tvSignIn.setText(Html.fromHtml("Not a member?  <font color='blue'>Sign In</font>."));
         bind.tvSignIn.setOnClickListener(v -> startActivity(new Intent(SignUpActivity.this, SignInActivity.class)));
 
-        if (BuildConfig.DEBUG) {
+        /*if (BuildConfig.DEBUG) {
             bind.etEmail.setText(testEmail);
             bind.etPass.setText(testPass);
             bind.rbMale.setChecked(true);
             bind.etCountry.setText("India");
-        }
+        }*/
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -90,12 +97,10 @@ public class SignUpActivity extends BaseActivity {
     }
 
     private void signup() {
-        String url = "http://192.168.0.108/ask_question_poll/api/public/api/signup";
-
         bind.ll.setClickable(false);
         bind.pb.setVisibility(View.VISIBLE);
 
-        VolleyMultipartRequest multipartRequest = new VolleyMultipartRequest(Request.Method.POST, url, response -> {
+        VolleyMultipartRequest multipartRequest = new VolleyMultipartRequest(Request.Method.POST, BASE_URL + "signup", response -> {
             bind.ll.setClickable(true);
             bind.pb.setVisibility(View.GONE);
 
@@ -112,7 +117,7 @@ public class SignUpActivity extends BaseActivity {
                     startActivity(
                             new Intent(SignUpActivity.this, VerifyActivity.class)
                                     .putExtra("temp_id", tempId)
-                                    .putExtra("email", email)
+//                                    .putExtra("email", email)
                     );
                 }
 
